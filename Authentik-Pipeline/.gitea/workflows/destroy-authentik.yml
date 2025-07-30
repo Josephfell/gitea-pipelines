@@ -1,0 +1,39 @@
+name: Destroy Authentik
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      GIT_USER: ${{ secrets.GIT_USER }}
+      GIT_PAT: ${{ secrets.GIT_PAT }}
+
+    steps:
+      - name: Check PAT secret length
+        run: |
+          echo "PAT length: ${{ secrets.GIT_PAT }}" | wc -c
+      - name: Clone Docker repo manually
+        run: |
+        # Add Git clone location below
+          git clone https://${GIT_USER}:${GIT_PAT}@
+          ls -la Docker
+
+      - name: Generate .env file for teardown
+        working-directory: Docker/authentik
+        run: |
+          cat <<EOF > .env
+          PG_PASS=${{ secrets.POSTGRES_PASSWORD }}
+          AUTHENTIK_SECRET_KEY=${{ secrets.AUTHENTIK_SECRET_KEY }}
+          AK_ADMIN_PASSWORD=${{ secrets.AUTHENTIK_ADMIN_PASSWORD }}
+          EOF
+
+      - name: Stop and remove containers and volumes
+        working-directory: Docker/authentik
+        run: |
+          docker compose --env-file .env down --volumes --remove-orphans
+
+      - name: Show volumes after teardown
+        run: docker volume ls

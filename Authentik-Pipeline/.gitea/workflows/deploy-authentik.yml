@@ -1,0 +1,40 @@
+name: Deploy Authentik
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      GIT_USER: ${{ secrets.GIT_USER }}
+      GIT_PAT: ${{ secrets.GIT_PAT }}
+
+    steps:
+      - name: Check PAT secret length
+        run: |
+          echo "PAT length: ${{ secrets.GIT_PAT }}" | wc -c
+      - name: Clone Docker repo manually
+        run: |
+        # Add Git clone location below
+          git clone https://${GIT_USER}:${GIT_PAT}@
+          ls -la Docker
+
+      - name: Generate .env file
+        run: |
+          cat <<EOF > Docker/authentik/.env
+          PG_PASS=${{ secrets.POSTGRES_PASSWORD }}
+          AUTHENTIK_SECRET_KEY=${{ secrets.AUTHENTIK_SECRET_KEY }}
+          AK_ADMIN_PASSWORD=${{ secrets.AK_ADMIN_PASSWORD }}
+          EOF
+
+      - name: Pull images & deploy
+        working-directory: Docker/authentik
+        run: |
+          docker compose --env-file .env pull 
+          docker compose --env-file .env down
+          docker compose --env-file .env up -d
+
+      - name: Remove .env
+        run: rm Docker/authentik/.env
